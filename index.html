@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM VRAM Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background-color: #111;
+      color: #eee;
+    }
+    h1 {
+      text-align: center;
+      color: #6cf;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #222;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #333;
+      color: #eee;
+    }
+    select option {
+      background: #222;
+      color: #eee;
+    }
+    button {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      background: #6cf;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .result {
+      margin-top: 1.5rem;
+      background: #181818;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>LLM VRAM Calculator</h1>
+  <div class="container">
+    <label for="preset">Model Preset</label>
+    <select id="preset" onchange="applyPreset()">
+      <option value="">-- Select a preset --</option>
+      <option value="gpt-oss-20b">GPT-OSS-20B</option>
+      <option value="gpt-oss-120b">GPT-OSS-120B</option>
+      <option value="deepseek-r1">DeepSeek-R1</option>
+      <option value="llama-3.1-405b">Llama 3.1 405B</option>
+      <option value="llama-3.3-70b">Llama 3.3 70B</option>
+    </select>
+
+    <label for="params">Total Parameters (in billions)</label>
+    <input type="number" id="params" placeholder="e.g. 7" step="0.1" />
+
+    <label for="mode">Mode</label>
+    <select id="mode">
+      <option value="inference">Inference</option>
+      <option value="training">Training</option>
+    </select>
+
+    <label for="dtype">Data Type</label>
+    <select id="dtype">
+      <option value="fp32">FP32 (4 bytes)</option>
+      <option value="fp16">FP16 (2 bytes)</option>
+      <option value="bf16">BF16 (2 bytes)</option>
+      <option value="int8">INT8 (1 byte)</option>
+      <option value="int4">INT4 (0.5 bytes)</option>
+      <option value="nf4">NF4 (0.5 bytes)</option>
+      <option value="fp8">FP8 (1 byte)</option>
+    </select>
+
+    <label for="batch">Batch Size</label>
+    <input type="number" id="batch" value="1" />
+
+    <label for="seq">Sequence Length</label>
+    <input type="number" id="seq" value="2048" />
+
+    <label for="gen">Generation Length</label>
+    <input type="number" id="gen" value="512" />
+
+    <button onclick="calculateVRAM()">Compute VRAM</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const presets = {
+      'gpt-oss-20b': 21,
+      'gpt-oss-120b': 117,
+      'deepseek-r1': 671,
+      'llama-3.1-405b': 405,
+      'llama-3.3-70b': 70
+    };
+
+    function applyPreset() {
+      const preset = document.getElementById('preset').value;
+      if (preset && presets[preset]) {
+        document.getElementById('params').value = presets[preset];
+      }
+    }
+
+    function calculateVRAM() {
+      const paramsB = parseFloat(document.getElementById('params').value);
+      const mode = document.getElementById('mode').value;
+      const dtype = document.getElementById('dtype').value;
+      const batch = parseInt(document.getElementById('batch').value);
+      const seq = parseInt(document.getElementById('seq').value);
+      const gen = parseInt(document.getElementById('gen').value);
+
+      if (isNaN(paramsB) || paramsB <= 0) {
+        document.getElementById('result').innerHTML = 'Please enter a valid parameter count.';
+        return;
+      }
+
+      const bytesPerParam = {
+        fp32: 4,
+        fp16: 2,
+        bf16: 2,
+        int8: 1,
+        int4: 0.5,
+        nf4: 0.5,
+        fp8: 1
+      }[dtype];
+
+      const params = paramsB * 1e9;
+      const weightVRAM = params * bytesPerParam;
+      const trainingFactor = mode === 'training' ? 4 : 1;
+      const kvVRAM = paramsB * batch * (seq + gen) * 0.000002 * bytesPerParam * 1e9;
+
+      const totalVRAM = (weightVRAM * trainingFactor + kvVRAM) / (1024 ** 3);
+
+      document.getElementById('result').innerHTML = `
+        <b>Estimated VRAM usage:</b><br>
+        Weights: ${(weightVRAM / 1e9).toFixed(2)} GB<br>
+        KV Cache: ${(kvVRAM / 1e9).toFixed(2)} GB<br>
+        Mode Multiplier: x${trainingFactor}<br>
+        <hr>
+        <b>Total ≈ ${totalVRAM.toFixed(2)} GB</b>
+      `;
+    }
+  </script>
+</body>
+</html>
