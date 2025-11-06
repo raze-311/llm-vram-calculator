@@ -1,0 +1,9 @@
+{
+  "repository": "llm-vram-calculator",
+  "original_filename": "llm_vram_calculator.html",
+  "repo_filename": "index.html",
+  "content_hash": "cee42b7a22e5366953cb0d9da54abd0a95afce5e4e0868a39db191b34467ea16",
+  "deployed_at": "2025-11-06T14:56:29.708801",
+  "commit_sha": "2278201edbe5adf69995805f9cff20fa501c4d19",
+  "deployer": "github-pages-deployer"
+}
